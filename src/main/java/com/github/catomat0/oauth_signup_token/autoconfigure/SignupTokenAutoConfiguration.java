@@ -10,11 +10,13 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
 
-@AutoConfiguration
+@AutoConfiguration(after = RedisAutoConfiguration.class)
 @ConditionalOnClass(Jwts.class)
 @EnableConfigurationProperties(SignupTokenProperties.class)
 public class SignupTokenAutoConfiguration {
@@ -27,19 +29,23 @@ public class SignupTokenAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnClass(RedisTemplate.class)
-    @ConditionalOnBean(RedisTemplate.class)
-    public SignupTokenService signupTokenService(
-            RedisTemplate<String, String> redisTemplate,
-            SignupTokenProperties properties
-    ) {
-        return new SignupTokenService(redisTemplate, properties);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
     @ConditionalOnClass(HttpServletResponse.class)
     public SignupTokenCookieWriter signupTokenCookieWriter(SignupTokenProperties properties) {
         return new SignupTokenCookieWriter(properties);
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(RedisTemplate.class)
+    @ConditionalOnBean(RedisTemplate.class)
+    static class RedisConfiguration {
+
+        @Bean
+        @ConditionalOnMissingBean
+        SignupTokenService signupTokenService(
+                RedisTemplate<String, String> redisTemplate,
+                SignupTokenProperties properties
+        ) {
+            return new SignupTokenService(redisTemplate, properties);
+        }
     }
 }
